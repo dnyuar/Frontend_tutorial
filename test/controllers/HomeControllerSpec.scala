@@ -1,9 +1,16 @@
 package controllers
 
+import models.{RequestModel, ResponseModel}
 import org.scalatestplus.play._
 import org.scalatestplus.play.guice._
 import play.api.test._
 import play.api.test.Helpers._
+import services.CarService
+
+import scala.concurrent.{ExecutionContext, Future}
+import org.scalamock.scalatest.MockFactory
+import play.api.mvc.{AnyContent, Result}
+
 
 /**
  * Add your spec here.
@@ -11,35 +18,47 @@ import play.api.test.Helpers._
  *
  * For more information, see https://www.playframework.com/documentation/latest/ScalaTestingWithScalaTest
  */
-class HomeControllerSpec extends PlaySpec with GuiceOneAppPerTest with Injecting {
+class HomeControllerSpec extends PlaySpec with GuiceOneAppPerTest with Injecting with MockFactory  {
 
-  "HomeController GET" should {
+  val ec: ExecutionContext = ExecutionContext.Implicits.global
 
-    "render the index page from a new instance of controller" in {
-      val controller = new HomeController(stubControllerComponents())
-      val home = controller.index().apply(FakeRequest(GET, "/"))
+  val mockService: CarService = mock[CarService]
+  val controller = new HomeController(stubControllerComponents(), mockService, ec)
 
-      status(home) mustBe OK
-      contentType(home) mustBe Some("text/html")
-      contentAsString(home) must include ("Welcome to Play")
+  def mockServiceCall = (mockService.getDetails(_: RequestModel)(_: ExecutionContext))
+    .expects(RequestModel("Peter"),*)
+    .returning(Future.successful(ResponseModel("Audi","Blue",10)))
+
+
+  ".index" should {
+
+    "return a response" when {
+
+      "a valid input is given" which {
+
+        val request: FakeRequest[AnyContent] = FakeRequest()
+
+        "returns a 200" in {
+          mockServiceCall
+
+          val response: Future[Result] = controller.index("Peter")(request)
+          status(response) mustBe OK
+        }
+
+        "contains specific page elements" in {
+          mockServiceCall
+
+          val response: Future[Result] = controller.index("Peter")(request)
+          val body = contentAsString(response)
+
+          body must include("Audi")
+          body must include("Blue")
+          body must include("10")
+
+        }
+      }
     }
 
-    "render the index page from the application" in {
-      val controller = inject[HomeController]
-      val home = controller.index().apply(FakeRequest(GET, "/"))
 
-      status(home) mustBe OK
-      contentType(home) mustBe Some("text/html")
-      contentAsString(home) must include ("Welcome to Play")
-    }
-
-    "render the index page from the router" in {
-      val request = FakeRequest(GET, "/")
-      val home = route(app, request).get
-
-      status(home) mustBe OK
-      contentType(home) mustBe Some("text/html")
-      contentAsString(home) must include ("Welcome to Play")
-    }
   }
 }

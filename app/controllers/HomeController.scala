@@ -4,7 +4,7 @@ import javax.inject._
 import models.RequestModel
 import play.api._
 import play.api.mvc._
-import services.PersonService
+import services.CarService
 import models.RequestModel
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -15,7 +15,7 @@ import scala.concurrent.{ExecutionContext, Future}
  */
 @Singleton
 class HomeController @Inject()(val controllerComponents: ControllerComponents,
-                              val service: PersonService,
+                               val service: CarService,
                                implicit val ec: ExecutionContext
                               ) extends BaseController {
 
@@ -29,13 +29,13 @@ class HomeController @Inject()(val controllerComponents: ControllerComponents,
   def index(name:String) = Action.async { implicit request: Request[AnyContent] =>
 
     val requestModel = RequestModel(name)
-    println("------------------------------"+requestModel)
+    println(requestModel)
 
-   val a = service.getDetails(requestModel).map{ result =>
+   service.getDetails(requestModel).map{ result =>
       Ok(views.html.index(result))
 
     }
-    a
+
 
   }
 }
